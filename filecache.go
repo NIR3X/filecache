@@ -69,3 +69,33 @@ func (f *FileCache) Get(path string) (io.Reader, *io.PipeWriter, error) {
 	}
 	return nil, nil, os.ErrNotExist
 }
+
+const (
+	NotFound = iota
+	Cached
+	Piped
+)
+
+func (f *FileCache) Identify(path string) int {
+	f.mtx.RLock()
+	defer f.mtx.RUnlock()
+	if _, ok := f.cached[path]; ok {
+		return Cached
+	}
+	if _, ok := f.toPipe[path]; ok {
+		return Piped
+	}
+	return NotFound
+}
+
+func (f *FileCache) GetCached(path string) (io.Reader, int) {
+	f.mtx.RLock()
+	defer f.mtx.RUnlock()
+	if data, ok := f.cached[path]; ok {
+		return bytes.NewReader(data), Cached
+	}
+	if _, ok := f.toPipe[path]; ok {
+		return nil, Piped
+	}
+	return nil, NotFound
+}
