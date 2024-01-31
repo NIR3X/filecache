@@ -25,8 +25,6 @@ func NewFileCache(maxCacheSize int64) *FileCache {
 }
 
 func (f *FileCache) Update(path string) error {
-	f.mtx.Lock()
-	defer f.mtx.Unlock()
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return err
@@ -35,36 +33,44 @@ func (f *FileCache) Update(path string) error {
 	if err != nil {
 		return err
 	}
-	if info.Size() > f.maxCacheSize {
+	f.mtx.RLock()
+	maxCacheSize := f.maxCacheSize
+	f.mtx.RUnlock()
+	if info.Size() > maxCacheSize {
+		f.mtx.Lock()
 		f.toPipe[absPath] = struct{}{}
+		f.mtx.Unlock()
 		return nil
 	}
 	data, err := os.ReadFile(absPath)
 	if err != nil {
 		return err
 	}
+	f.mtx.Lock()
 	f.cached[absPath] = data
+	f.mtx.Unlock()
 	return nil
 }
 
 func (f *FileCache) Delete(path string) {
-	f.mtx.Lock()
-	defer f.mtx.Unlock()
 	absPath, err := filepath.Abs(path)
 	if err == nil {
+		f.mtx.Lock()
 		delete(f.cached, absPath)
 		delete(f.toPipe, absPath)
+		f.mtx.Unlock()
 	}
 }
 
 func (f *FileCache) Get(path string) (io.Reader, *io.PipeWriter, error) {
-	f.mtx.RLock()
-	defer f.mtx.RUnlock()
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, nil, err
 	}
-	if _, ok := f.toPipe[absPath]; ok {
+	f.mtx.RLock()
+	_, ok := f.toPipe[absPath]
+	f.mtx.RUnlock()
+	if ok {
 		file, err := os.OpenFile(absPath, os.O_RDONLY, 0666)
 		if err != nil {
 			return nil, nil, err
@@ -76,7 +82,10 @@ func (f *FileCache) Get(path string) (io.Reader, *io.PipeWriter, error) {
 		}()
 		return r, w, nil
 	}
-	if data, ok := f.cached[absPath]; ok {
+	f.mtx.RLock()
+	data, ok := f.cached[absPath]
+	f.mtx.RUnlock()
+	if ok {
 		return bytes.NewReader(data), nil, nil
 	}
 	return nil, nil, os.ErrNotExist
@@ -89,32 +98,40 @@ const (
 )
 
 func (f *FileCache) Identify(path string) int {
-	f.mtx.RLock()
-	defer f.mtx.RUnlock()
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return NotFound
 	}
-	if _, ok := f.cached[absPath]; ok {
+	f.mtx.RLock()
+	_, ok := f.cached[absPath]
+	f.mtx.RUnlock()
+	if ok {
 		return Cached
 	}
-	if _, ok := f.toPipe[absPath]; ok {
+	f.mtx.RLock()
+	_, ok = f.toPipe[absPath]
+	f.mtx.RUnlock()
+	if ok {
 		return Piped
 	}
 	return NotFound
 }
 
 func (f *FileCache) GetCached(path string) (io.Reader, int) {
-	f.mtx.RLock()
-	defer f.mtx.RUnlock()
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, NotFound
 	}
-	if data, ok := f.cached[absPath]; ok {
+	f.mtx.RLock()
+	data, ok := f.cached[absPath]
+	f.mtx.RUnlock()
+	if ok {
 		return bytes.NewReader(data), Cached
 	}
-	if _, ok := f.toPipe[absPath]; ok {
+	f.mtx.RLock()
+	_, ok = f.toPipe[absPath]
+	f.mtx.RUnlock()
+	if ok {
 		return nil, Piped
 	}
 	return nil, NotFound
