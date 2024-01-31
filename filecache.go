@@ -4,8 +4,17 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 )
+
+func absPath(path string) string {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	return absPath
+}
 
 type FileCache struct {
 	mtx          sync.RWMutex
@@ -26,6 +35,7 @@ func NewFileCache(maxCacheSize int64) *FileCache {
 func (f *FileCache) Update(path string) error {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
+	path = absPath(path)
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -45,6 +55,7 @@ func (f *FileCache) Update(path string) error {
 func (f *FileCache) Delete(path string) {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
+	path = absPath(path)
 	delete(f.cached, path)
 	delete(f.toPipe, path)
 }
@@ -52,6 +63,7 @@ func (f *FileCache) Delete(path string) {
 func (f *FileCache) Get(path string) (io.Reader, *io.PipeWriter, error) {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
+	path = absPath(path)
 	if _, ok := f.toPipe[path]; ok {
 		file, err := os.OpenFile(path, os.O_RDONLY, 0666)
 		if err != nil {
@@ -79,6 +91,7 @@ const (
 func (f *FileCache) Identify(path string) int {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
+	path = absPath(path)
 	if _, ok := f.cached[path]; ok {
 		return Cached
 	}
@@ -91,6 +104,7 @@ func (f *FileCache) Identify(path string) int {
 func (f *FileCache) GetCached(path string) (io.Reader, int) {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
+	path = absPath(path)
 	if data, ok := f.cached[path]; ok {
 		return bytes.NewReader(data), Cached
 	}
