@@ -32,16 +32,16 @@ func TestFileCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fc := NewFileCache(2 * 1024 * 1024)
-	err = fc.Update(file1.Name())
+	f := NewFileCache(2 * 1024 * 1024)
+	err = f.Update(file1.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = fc.Update(file2.Name())
+	err = f.Update(file2.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, w, err := fc.Get(file1.Name())
+	r, w, err := f.Get(file1.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestFileCache(t *testing.T) {
 	if n != 1024*1024 {
 		t.Fatalf("expected to read 1MB, read %d bytes", n)
 	}
-	r, w, err = fc.Get(file2.Name())
+	r, w, err = f.Get(file2.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -23,36 +23,36 @@ func NewFileCache(maxCacheSize int64) *FileCache {
 	}
 }
 
-func (fc *FileCache) Update(path string) error {
-	fc.mtx.Lock()
-	defer fc.mtx.Unlock()
+func (f *FileCache) Update(path string) error {
+	f.mtx.Lock()
+	defer f.mtx.Unlock()
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
-	if info.Size() > fc.maxCacheSize {
-		fc.toPipe[path] = struct{}{}
+	if info.Size() > f.maxCacheSize {
+		f.toPipe[path] = struct{}{}
 		return nil
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	fc.cached[path] = data
+	f.cached[path] = data
 	return nil
 }
 
-func (fc *FileCache) Delete(path string) {
-	fc.mtx.Lock()
-	defer fc.mtx.Unlock()
-	delete(fc.cached, path)
-	delete(fc.toPipe, path)
+func (f *FileCache) Delete(path string) {
+	f.mtx.Lock()
+	defer f.mtx.Unlock()
+	delete(f.cached, path)
+	delete(f.toPipe, path)
 }
 
-func (fc *FileCache) Get(path string) (io.Reader, *io.PipeWriter, error) {
-	fc.mtx.RLock()
-	defer fc.mtx.RUnlock()
-	if _, ok := fc.toPipe[path]; ok {
+func (f *FileCache) Get(path string) (io.Reader, *io.PipeWriter, error) {
+	f.mtx.RLock()
+	defer f.mtx.RUnlock()
+	if _, ok := f.toPipe[path]; ok {
 		file, err := os.OpenFile(path, os.O_RDONLY, 0666)
 		if err != nil {
 			return nil, nil, err
@@ -64,7 +64,7 @@ func (fc *FileCache) Get(path string) (io.Reader, *io.PipeWriter, error) {
 		}()
 		return r, w, nil
 	}
-	if data, ok := fc.cached[path]; ok {
+	if data, ok := f.cached[path]; ok {
 		return bytes.NewReader(data), nil, nil
 	}
 	return nil, nil, os.ErrNotExist

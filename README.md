@@ -26,17 +26,17 @@ import (
 
 func main() {
 	// Create a new FileCache instance with a specified maximum cache size
-	fc := filecache.NewFileCache(2 * 1024 * 1024)
+	f := filecache.NewFileCache(2 * 1024 * 1024)
 
 	// Update the cache with a file
-	err := fc.Update("/path/to/your/file.txt")
+	err := f.Update("/path/to/your/file.txt")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
 	// Get a reader for the file from the cache
-	reader, writer, err := fc.Get("/path/to/your/file.txt")
+	reader, writer, err := f.Get("/path/to/your/file.txt")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -49,7 +49,7 @@ func main() {
 	// ...
 
 	// Delete a file from the cache
-	fc.Delete("/path/to/your/file.txt")
+	f.Delete("/path/to/your/file.txt")
 }
 ```
 
