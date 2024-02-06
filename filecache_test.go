@@ -24,11 +24,11 @@ func TestFileCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(file2.Name())
-	_, err = file1.Write(make([]byte, 1024*1024))
+	_, err = file1.Write(make([]uint8, 1024*1024))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = file2.Write(make([]byte, 3*1024*1024))
+	_, err = file2.Write(make([]uint8, 3*1024*1024))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestFileCache(t *testing.T) {
 	if w != nil {
 		t.Fatalf("expected no writer, got %v", w)
 	}
-	buf := make([]byte, 1024*1024)
+	buf := make([]uint8, 1024*1024)
 	n, err := r.Read(buf)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestFileCache(t *testing.T) {
 		t.Fatalf("expected a writer, got nil")
 	}
 	defer w.Close()
-	buf = make([]byte, 3*1024*1024)
+	buf = make([]uint8, 3*1024*1024)
 	n, err = rand.Read(buf)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +72,7 @@ func TestFileCache(t *testing.T) {
 	if n != 3*1024*1024 {
 		t.Fatalf("expected to read 3MB, read %d bytes", n)
 	}
-	buf2 := make([]byte, 3*1024*1024)
+	buf2 := make([]uint8, 3*1024*1024)
 	n, err = rand.Read(buf2)
 	if err != nil {
 		t.Fatal(err)
